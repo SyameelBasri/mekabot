@@ -3,13 +3,12 @@ import 'dart:convert';
 import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:http/browser_client.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'service_status_screen.dart';
 import 'package:chatbot_app/model/Service.dart';
 
-const apiUrl = "https://k2pat.net/mekabot";
+const apiUrl = "https://k2pat.net/mekabot/test";
 const imagePrefix = "data:image/jpeg;base64,";
 
 
@@ -27,6 +26,7 @@ class _ChatScreenState extends State<ChatScreen> {
   bool _isLoading = false;
   bool _isNewChat = true;
   Service? _service;
+  String? session;
 
   //UI Stuffs - Faris Start
   Timer? _timer;
@@ -96,14 +96,16 @@ class _ChatScreenState extends State<ChatScreen> {
       final response = await http.post(
         Uri.parse(url),
         headers: {'Content-Type': 'application/json'},
-        body: json.encode({'content': content, 'new': _isNewChat}),
+        body: json.encode({'content': content, 'new': _isNewChat, 'session': session}),
       );
 
       if (response.statusCode == 200) {
         setState(() {
           _isNewChat = false;
         });
-        final List<dynamic> botResponses = json.decode(utf8.decode(response.bodyBytes));
+        final Map<String, dynamic> responseObj = json.decode(utf8.decode(response.bodyBytes));
+        final List<dynamic> botResponses = responseObj['content'];
+        session = responseObj['session'];
 
         for (var botResponse in botResponses) {
           if (botResponse['type'] == 'text' && botResponse['text'] != null) {
