@@ -1,4 +1,6 @@
 import 'dart:convert';
+
+import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:http/browser_client.dart';
@@ -26,6 +28,41 @@ class _ChatScreenState extends State<ChatScreen> {
   bool _isNewChat = true;
   Service? _service;
 
+  //UI Stuffs - Faris Start
+  Timer? _timer;
+  final TextEditingController _textController = TextEditingController();
+  bool _isTextFieldEmpty = true;
+  bool _isTextVisible = false;
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Start a timer to play the animation at regular intervals
+
+    _controller.addListener(() {
+      setState(() {
+        _isTextFieldEmpty = _controller.text.isEmpty;
+      });
+    });
+
+    Future.delayed(const Duration(milliseconds: 500), () {
+      setState(() {
+        _isTextVisible = true;
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _controller.dispose();
+    _textController.dispose();
+    super.dispose();
+  }
+
+  //UI Stuffs - Faris End
+
   Future<void> _sendMessage(String message) async {
     if (message.trim().isEmpty && _images.isEmpty) return;
 
@@ -40,7 +77,10 @@ class _ChatScreenState extends State<ChatScreen> {
       // Convert images to base64
       List<Map<String, dynamic>> base64Images = _images.map((imageBytes) {
         final base64Image = base64Encode(imageBytes);
-        return {'type': 'image_url', 'image_url': {'url': imagePrefix + base64Image}};
+        return {
+          'type': 'image_url',
+          'image_url': {'url': imagePrefix + base64Image}
+        };
       }).toList();
 
       // Prepare content
@@ -68,9 +108,12 @@ class _ChatScreenState extends State<ChatScreen> {
         for (var botResponse in botResponses) {
           if (botResponse['type'] == 'text' && botResponse['text'] != null) {
             setState(() {
-              _messages.add({'bot': {'text': botResponse['text']}});
+              _messages.add({
+                'bot': {'text': botResponse['text']}
+              });
             });
-          } else if (botResponse['type'] == 'button' && botResponse['button'] != null) {
+          } else if (botResponse['type'] == 'button' &&
+              botResponse['button'] != null) {
             final button = botResponse['button'];
             setState(() {
               _messages.add({
@@ -82,21 +125,27 @@ class _ChatScreenState extends State<ChatScreen> {
                 }
               });
             });
-          } else if (botResponse['type'] == 'service' && botResponse['service'] != null) {
+          } else if (botResponse['type'] == 'service' &&
+              botResponse['service'] != null) {
             final service = botResponse['service'];
             setState(() {
-              _service = Service(service['service_type'], service['description'], service['icon_url']);
+              _service = Service(service['service_type'],
+                  service['description'], service['icon_url']);
             });
           }
         }
       } else {
         setState(() {
-          _messages.add({'bot': {'text': 'Error: Unable to fetch response.'}});
+          _messages.add({
+            'bot': {'text': 'Error: Unable to fetch response.'}
+          });
         });
       }
     } catch (e) {
       setState(() {
-        _messages.add({'bot': {'text': 'Error: ${e.toString()}'}});
+        _messages.add({
+          'bot': {'text': 'Error: ${e.toString()}'}
+        });
       });
     } finally {
       setState(() {
@@ -137,8 +186,26 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Chatbot'),
+      backgroundColor:
+          const Color(0xFFECF9FF), // Change Scaffold background color
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(
+            kToolbarHeight + 20), // Add 20px to the default AppBar height
+        child: Column(
+          children: [
+            const SizedBox(height: 20), // Add 20px space at the top
+            AppBar(
+              title: const Text(
+                'MekaBot',
+                style: TextStyle(color: Colors.black), // Change title color
+              ),
+              centerTitle: true, // Center the title
+              backgroundColor:
+                  Colors.transparent, // Make AppBar background transparent
+              elevation: 0, // Remove shadow
+            ),
+          ],
+        ),
       ),
       body: Column(
         children: [
@@ -148,20 +215,28 @@ class _ChatScreenState extends State<ChatScreen> {
               itemBuilder: (context, index) {
                 final message = _messages[index];
                 final isUserMessage = message.containsKey('user');
-                final messageData = isUserMessage ? message['user'] : message['bot'];
+                final messageData =
+                    isUserMessage ? message['user'] : message['bot'];
 
                 return Container(
-                  alignment: isUserMessage ? Alignment.centerRight : Alignment.centerLeft,
-                  margin: const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
+                  alignment: isUserMessage
+                      ? Alignment.centerRight
+                      : Alignment.centerLeft,
+                  margin:
+                      const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
                   child: Column(
-                    crossAxisAlignment: isUserMessage ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                    crossAxisAlignment: isUserMessage
+                        ? CrossAxisAlignment.end
+                        : CrossAxisAlignment.start,
                     children: [
                       // Display images
-                      if (messageData['images'] != null && messageData['images'].isNotEmpty)
+                      if (messageData['images'] != null &&
+                          messageData['images'].isNotEmpty)
                         Wrap(
                           spacing: 5,
                           runSpacing: 5,
-                          children: (messageData['images'] as List<Uint8List>).map((imageBytes) {
+                          children: (messageData['images'] as List<Uint8List>)
+                              .map((imageBytes) {
                             return Image.memory(
                               imageBytes,
                               width: 100,
@@ -172,24 +247,78 @@ class _ChatScreenState extends State<ChatScreen> {
                         ),
                       // Display text
                       if (messageData['text'] != null && messageData['text']!.isNotEmpty)
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: isUserMessage ? Colors.blue[200] : Colors.grey[300],
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            messageData['text'],
-                            style: const TextStyle(fontSize: 16),
-                          ),
-                        ),
+                        isUserMessage
+                            ? Container(
+                                margin: const EdgeInsets.all(5.0), // Existing margin
+                                padding: const EdgeInsets.all(15),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(25),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.grey.withOpacity(0.5),
+                                      spreadRadius: 2,
+                                      blurRadius: 5,
+                                      offset: const Offset(0, 3), // Shadow position
+                                    ),
+                                  ],
+                                ),
+                                child: Text(
+                                  messageData['text'],
+                                  style: const TextStyle(fontSize: 16),
+                                ),
+                              )
+                            : Row(
+                              children: [
+                                IconButton(
+                                  icon: Image.asset('icons/bot-icon.png'), // Use the custom icon
+                                  onPressed: () {
+                                    Scaffold.of(context).openDrawer();
+                                  },
+                                ),
+                                const SizedBox(width: 10), // Spacing between icon and container
+                                Expanded(
+                                  child: Container(
+                                    margin: const EdgeInsets.all(5.0), // Existing margin
+                                    padding: const EdgeInsets.all(15),
+                                    decoration: BoxDecoration(
+                                      color: Colors.transparent,
+                                      borderRadius: BorderRadius.circular(25),
+                                      border: Border.all(
+                                        color: const Color(0xFF00B3FE),
+                                        width: 1,
+                                      ),
+                                      // boxShadow: [
+                                      //   BoxShadow(
+                                      //     color: Colors.grey.withOpacity(0.5),
+                                      //     spreadRadius: 2,
+                                      //     blurRadius: 5,
+                                      //     offset: const Offset(0, 3), // Shadow position
+                                      //   ),
+                                      // ],
+                                    ),
+                                    child: Text(
+                                      messageData['text'],
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        color: Color(0xFF393939),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                       // Display buttons
-                      if (messageData['buttons'] != null && messageData['buttons']!.isNotEmpty)
+                      if (messageData['buttons'] != null &&
+                          messageData['buttons']!.isNotEmpty)
                         Wrap(
                           spacing: 10,
-                          children: (messageData['buttons'] as List<Map<String, dynamic>>).map((button) {
+                          children: (messageData['buttons']
+                                  as List<Map<String, dynamic>>)
+                              .map((button) {
                             return ElevatedButton(
-                              onPressed: () => _handleButtonTap(button['action'] ?? ''),
+                              onPressed: () =>
+                                  _handleButtonTap(button['action'] ?? ''),
                               child: Text(button['label'] ?? 'Unknown'),
                             );
                           }).toList(),
@@ -201,13 +330,35 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
           ),
           if (_service != null)
-            ElevatedButton(
-              onPressed: () {
-                Navigator.push(context, MaterialPageRoute(
-                    builder: (context) => ServiceStatusScreen(service: _service!)
-                ));
-              },
-              child: const Text('View status'),
+            Container(
+              // margin: const EdgeInsets.all(5.0), // Adds margin around the button
+              child: ElevatedButton(
+                onPressed: () => print(_service!.serviceType),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white, // Background color
+                  foregroundColor: Colors.black, // Text color
+                  padding: const EdgeInsets.all(15), // Padding inside the button
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(25), // Rounded corners
+                    side: const BorderSide(
+                      color: Color(0xFF00B3FE), // Border color
+                      width: 1, // Border width
+                    ),
+                  ),
+                  elevation: 5, // Shadow elevation
+                  shadowColor: Colors.grey.withOpacity(0.5), // Shadow color
+                ),
+                child: Container(
+                  margin: const EdgeInsets.all(10.0), // Adds margin around the text
+                  child: const Text(
+                    'View service status',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold, // Makes the text bold
+                    ),
+                  ),
+                ),
+              ),
             ),
           if (_images.isNotEmpty)
             SizedBox(
@@ -229,8 +380,9 @@ class _ChatScreenState extends State<ChatScreen> {
                         Positioned(
                           top: 0,
                           right: 0,
+                          left: 45,
                           child: IconButton(
-                            icon: const Icon(Icons.close, color: Colors.red),
+                            icon: const Icon(Icons.close, color: Color(0xFF666666)),
                             onPressed: () {
                               setState(() {
                                 _images.removeAt(index);
@@ -250,34 +402,114 @@ class _ChatScreenState extends State<ChatScreen> {
               child: CircularProgressIndicator(),
             ),
           Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Row(
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.photo),
-                  onPressed: _pickImage,
-                ),
-                IconButton(
-                  icon: const Icon(Icons.camera_alt),
-                  onPressed: _captureImage,
-                ),
-                Expanded(
-                  child: TextField(
-                    controller: _controller,
-                    decoration: const InputDecoration(
-                      hintText: 'Type your message...',
-                      border: OutlineInputBorder(),
+            padding:
+                const EdgeInsets.only(top: 15.0), // Add 60px space from the top
+            child: Container(
+              // padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              // decoration: BoxDecoration(
+              //   color: Theme.of(context).colorScheme.surface,
+              //   border: Border(
+              //     top: BorderSide(color: Theme.of(context).dividerColor, width: 1),
+              //   ),
+              // ),
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 32.0),
+                child: Row(
+                  mainAxisAlignment:
+                      MainAxisAlignment.center, // Center the Row contents
+                  children: [
+                    Container(
+                      width: 325, // Set the desired width here
+                      decoration: BoxDecoration(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .background, // Use theme background color
+                        borderRadius: BorderRadius.circular(15.0),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.grey.withOpacity(0.5),
+                            spreadRadius: 2,
+                            blurRadius: 5,
+                            offset: Offset(0, 3), // changes position of shadow
+                          ),
+                        ],
+                      ),
+                      child: TextField(
+                        controller: _controller,
+                        decoration: InputDecoration(
+                          hintText: "Message",
+                          prefixIcon: IconButton(icon: const Icon(Icons.camera_alt), 
+                          onPressed: _pickImage),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _isTextFieldEmpty ? Icons.mic : Icons.send,
+                              color: Theme.of(context).colorScheme.primary,
+                            ), // Change icon based on text field content
+                            onPressed: () {
+                              if (_isTextFieldEmpty) {
+                                // Handle microphone button press
+                              } else {
+                                // Handle send button press
+                                _sendMessage(_controller.text);
+                              }
+                            },
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(15.0),
+                            borderSide: BorderSide(
+                              color: Color(0xFF00B3FE),
+                              width: 1.0,
+                            ),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 15.0, vertical: 9.0),
+                          hintStyle: Theme.of(context)
+                              .textTheme
+                              .bodyMedium, // Apply theme text style
+                        ),
+                        style: Theme.of(context)
+                            .textTheme
+                            .bodyMedium, // Apply theme text style
+                      ),
                     ),
-                  ),
+                    // IconButton(
+                    //   icon: Icon(Icons.mic, color: Theme.of(context).colorScheme.primary), // Change icon to microphone
+                    //   onPressed: () => _navigateToChatScreen(context),
+                    // ),
+                  ],
                 ),
-                const SizedBox(width: 10),
-                ElevatedButton(
-                  onPressed: () => _sendMessage(_controller.text),
-                  child: const Text('Send'),
-                ),
-              ],
+              ),
             ),
           ),
+          // Padding(
+          //   padding: const EdgeInsets.all(8.0),
+          //   child: Row(
+          //     children: [
+          //       IconButton(
+          //         icon: const Icon(Icons.photo),
+          //         onPressed: _pickImage,
+          //       ),
+          //       IconButton(
+          //         icon: const Icon(Icons.camera_alt),
+          //         onPressed: _captureImage,
+          //       ),
+          //       Expanded(
+          //         child: TextField(
+          //           controller: _controller,
+          //           decoration: const InputDecoration(
+          //             hintText: 'Message',
+          //             border: OutlineInputBorder(),
+          //           ),
+          //         ),
+          //       ),
+          //       const SizedBox(width: 10),
+          //       ElevatedButton(
+          //         onPressed: () => _sendMessage(_controller.text),
+          //         child: const Text('Send'),
+          //       ),
+          //     ],
+          //   ),
+          // ),
         ],
       ),
     );

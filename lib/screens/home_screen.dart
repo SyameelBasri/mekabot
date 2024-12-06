@@ -184,76 +184,29 @@ class _MekaBotState extends State<MekaBot> with SingleTickerProviderStateMixin {
               ),
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.only(top: 60.0), // Add 60px space from the top
+          const SizedBox(height: 50),
+          Center(
             child: Container(
-              // padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              // decoration: BoxDecoration(
-              //   color: Theme.of(context).colorScheme.surface,
-              //   border: Border(
-              //     top: BorderSide(color: Theme.of(context).dividerColor, width: 1),
-              //   ),
-              // ),
-              child: Padding(
-                padding: const EdgeInsets.only(bottom: 32.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center, // Center the Row contents
-                  children: [
-                    Container(
-                      width: 325, // Set the desired width here
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.background, // Use theme background color
-                        borderRadius: BorderRadius.circular(15.0),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.grey.withOpacity(0.5),
-                            spreadRadius: 2,
-                            blurRadius: 5,
-                            offset: Offset(0, 3), // changes position of shadow
-                          ),
-                        ],
-                      ),
-                      child: TextField(
-                        controller: _textController,
-                        decoration: InputDecoration(
-                          hintText: "Message",
-                          prefixIcon: Icon(Icons.camera_alt, color: Theme.of(context).colorScheme.primary), // Add camera icon
-                          suffixIcon: IconButton(
-                            icon: Icon(
-                              _isTextFieldEmpty ? Icons.mic : Icons.send,
-                              color: Theme.of(context).colorScheme.primary,
-                            ), // Change icon based on text field content
-                            onPressed: () {
-                              if (_isTextFieldEmpty) {
-                                // Handle microphone button press
-                              } else {
-                                // Handle send button press
-                                _navigateToChatScreen(context);
-                              }
-                            },
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(15.0),
-                            borderSide: BorderSide(
-                              color: Color(0xFF00B3FE),
-                              width: 1.0,
-                            ),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 15.0, vertical: 9.0),
-                          hintStyle: Theme.of(context).textTheme.bodyMedium, // Apply theme text style
-                        ),
-                        style: Theme.of(context).textTheme.bodyMedium, // Apply theme text style
-                      ),
-                    ),
-                  // IconButton(
-                  //   icon: Icon(Icons.mic, color: Theme.of(context).colorScheme.primary), // Change icon to microphone
-                  //   onPressed: () => _navigateToChatScreen(context),
-                  // ),
-                  ],
+              width: 100, // Set the desired width here
+              height: 100, // Set the desired height here
+              child: ElevatedButton(
+                onPressed: () => _navigateToChatScreen(context),
+                style: ElevatedButton.styleFrom(
+                  shape: CircleBorder(),
+                  padding: EdgeInsets.all(20),
+                  backgroundColor: Theme.of(context).colorScheme.primary, // Button color
+                ),
+                child: const Text(
+                  'Start',
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: Colors.white,
+                  ),
                 ),
               ),
             ),
           ),
+          const SizedBox(height: 250),
         ],
       ),
     );
