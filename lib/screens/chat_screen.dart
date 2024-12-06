@@ -3,11 +3,12 @@ import 'dart:convert';
 import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:http/browser_client.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'service_status_screen.dart';
 import 'package:chatbot_app/model/Service.dart';
+import 'package:lottie/lottie.dart';
+import 'package:chatbot_app/utils/scroll_physics.dart';
 
 const apiUrl = "https://k2pat.net/mekabot";
 const imagePrefix = "data:image/jpeg;base64,";
@@ -21,12 +22,15 @@ class ChatScreen extends StatefulWidget {
 
 class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _controller = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
   final List<Map<String, dynamic>> _messages = []; // Updated to support buttons
   final List<Uint8List> _images = [];
   final ImagePicker _picker = ImagePicker();
   bool _isLoading = false;
   bool _isNewChat = true;
   Service? _service;
+  String? session;
+  bool _showCTA = false;
 
   //UI Stuffs - Faris Start
   Timer? _timer;
@@ -96,14 +100,16 @@ class _ChatScreenState extends State<ChatScreen> {
       final response = await http.post(
         Uri.parse(url),
         headers: {'Content-Type': 'application/json'},
-        body: json.encode({'content': content, 'new': _isNewChat}),
+        body: json.encode({'content': content, 'new': _isNewChat, 'session': session}),
       );
 
       if (response.statusCode == 200) {
         setState(() {
           _isNewChat = false;
         });
-        final List<dynamic> botResponses = json.decode(utf8.decode(response.bodyBytes));
+        final Map<String, dynamic> responseObj = json.decode(utf8.decode(response.bodyBytes));
+        final List<dynamic> botResponses = responseObj['content'];
+        session = responseObj['session'];
 
         for (var botResponse in botResponses) {
           if (botResponse['type'] == 'text' && botResponse['text'] != null) {
@@ -116,6 +122,7 @@ class _ChatScreenState extends State<ChatScreen> {
               botResponse['button'] != null) {
             final button = botResponse['button'];
             setState(() {
+              _showCTA = true;
               _messages.add({
                 'bot': {
                   'text': null,
@@ -181,6 +188,22 @@ class _ChatScreenState extends State<ChatScreen> {
   void _handleButtonTap(String action) {
     // Send the action as a message and hide the buttons
     _sendMessage(action);
+
+    setState(() {
+      _showCTA = false;
+    });
+  }
+
+  void _scrollDown() {
+    _scrollController.animateTo(
+      _scrollController.position.maxScrollExtent,
+      duration: Duration(seconds: 1),
+      curve: Curves.fastOutSlowIn,
+    );
+  }
+
+  _scrollToBottom() {
+    _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
   }
 
   @override
@@ -211,6 +234,8 @@ class _ChatScreenState extends State<ChatScreen> {
         children: [
           Expanded(
             child: ListView.builder(
+              physics: const PositionRetainedScrollPhysics(),
+              controller: _scrollController,
               itemCount: _messages.length,
               itemBuilder: (context, index) {
                 final message = _messages[index];
@@ -269,6 +294,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                 ),
                               )
                             : Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 IconButton(
                                   icon: Image.asset('icons/bot-icon.png'), // Use the custom icon
@@ -282,27 +308,31 @@ class _ChatScreenState extends State<ChatScreen> {
                                     margin: const EdgeInsets.all(5.0), // Existing margin
                                     padding: const EdgeInsets.all(15),
                                     decoration: BoxDecoration(
-                                      color: Colors.transparent,
+                                      color: Colors.cyan,
                                       borderRadius: BorderRadius.circular(25),
                                       border: Border.all(
                                         color: const Color(0xFF00B3FE),
                                         width: 1,
                                       ),
-                                      // boxShadow: [
-                                      //   BoxShadow(
-                                      //     color: Colors.grey.withOpacity(0.5),
-                                      //     spreadRadius: 2,
-                                      //     blurRadius: 5,
-                                      //     offset: const Offset(0, 3), // Shadow position
-                                      //   ),
-                                      // ],
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.grey.withOpacity(0.5),
+                                          spreadRadius: 2,
+                                          blurRadius: 5,
+                                          offset: const Offset(0, 3), // Shadow position
+                                        ),
+                                      ],
                                     ),
-                                    child: Text(
-                                      messageData['text'],
-                                      style: const TextStyle(
-                                        fontSize: 16,
-                                        color: Color(0xFF393939),
-                                      ),
+                                    child: Column(
+                                      children: [
+                                        Text(
+                                          messageData['text'],
+                                          style: const TextStyle(
+                                            fontSize: 16,
+                                            color: Color(0xFF393939),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 ),
@@ -311,17 +341,23 @@ class _ChatScreenState extends State<ChatScreen> {
                       // Display buttons
                       if (messageData['buttons'] != null &&
                           messageData['buttons']!.isNotEmpty)
-                        Wrap(
-                          spacing: 10,
-                          children: (messageData['buttons']
-                                  as List<Map<String, dynamic>>)
-                              .map((button) {
-                            return ElevatedButton(
-                              onPressed: () =>
-                                  _handleButtonTap(button['action'] ?? ''),
-                              child: Text(button['label'] ?? 'Unknown'),
-                            );
-                          }).toList(),
+                        Visibility(
+                          visible: _showCTA,
+                          child: Align(
+                            alignment: Alignment.topRight,
+                            child: Wrap(
+                              spacing: 10,
+                              children: (messageData['buttons']
+                                      as List<Map<String, dynamic>>)
+                                  .map((button) {
+                                return ElevatedButton(
+                                  onPressed: () =>
+                                      _handleButtonTap(button['action'] ?? ''),
+                                  child: Text(button['label'] ?? 'Unknown'),
+                                );
+                              }).toList(),
+                            ),
+                          ),
                         ),
                     ],
                   ),
@@ -330,35 +366,39 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
           ),
           if (_service != null)
-            Container(
-              // margin: const EdgeInsets.all(5.0), // Adds margin around the button
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.push(context, MaterialPageRoute(
-                      builder: (context) => ServiceStatusScreen(service: _service!)
-                  ));
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white, // Background color
-                  foregroundColor: Colors.black, // Text color
-                  padding: const EdgeInsets.all(15), // Padding inside the button
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(25), // Rounded corners
-                    side: const BorderSide(
-                      color: Color(0xFF00B3FE), // Border color
-                      width: 1, // Border width
+            Padding(
+              padding: const EdgeInsets.only(top: 10),
+              child: Container(
+                width: 325,
+                // margin: const EdgeInsets.all(5.0), // Adds margin around the button
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.push(context, MaterialPageRoute(
+                        builder: (context) => ServiceStatusScreen(service: _service!)
+                    ));
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white, // Background color
+                    foregroundColor: Colors.black, // Te// Padding inside the button
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(25), // Rounded corners
+                      side: const BorderSide(
+                        color: Colors.cyan, // Border color
+                        width: 1, // Border width
+                      ),
                     ),
+                    elevation: 5, // Shadow elevation
+                    shadowColor: Colors.grey.withOpacity(0.5), // Shadow color
                   ),
-                  elevation: 5, // Shadow elevation
-                  shadowColor: Colors.grey.withOpacity(0.5), // Shadow color
-                ),
-                child: Container(
-                  margin: const EdgeInsets.all(10.0), // Adds margin around the text
-                  child: const Text(
-                    'View service status',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold, // Makes the text bold
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4.0),
+                    child: ListTile(
+                      leading: Image.network(_service!.iconUrl),
+                      title: Text(
+                        "View service status",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
                     ),
                   ),
                 ),
@@ -401,10 +441,7 @@ class _ChatScreenState extends State<ChatScreen> {
               ),
             ),
           if (_isLoading)
-            const Padding(
-              padding: EdgeInsets.all(8.0),
-              child: CircularProgressIndicator(),
-            ),
+            LinearProgressIndicator(),
           Padding(
             padding:
                 const EdgeInsets.only(top: 15.0), // Add 60px space from the top
@@ -439,6 +476,7 @@ class _ChatScreenState extends State<ChatScreen> {
                         ],
                       ),
                       child: TextField(
+                        enabled: !_isLoading,
                         controller: _controller,
                         decoration: InputDecoration(
                           hintText: "Message",
@@ -461,7 +499,7 @@ class _ChatScreenState extends State<ChatScreen> {
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(15.0),
                             borderSide: BorderSide(
-                              color: Color(0xFF00B3FE),
+                              color: Colors.cyan,
                               width: 1.0,
                             ),
                           ),
