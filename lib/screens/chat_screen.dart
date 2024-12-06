@@ -1,19 +1,16 @@
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:http/browser_client.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
+import 'service_status_screen.dart';
+import 'package:chatbot_app/model/Service.dart';
 
 const apiUrl = "https://k2pat.net/mekabot";
 const imagePrefix = "data:image/jpeg;base64,";
 
-class Service {
-  final String serviceType;
-  final String description;
-  final String iconUrl;
-  
-  Service(this.serviceType, this.description, this.iconUrl);
-}
+
 
 class ChatScreen extends StatefulWidget {
   @override
@@ -26,6 +23,7 @@ class _ChatScreenState extends State<ChatScreen> {
   final List<Uint8List> _images = [];
   final ImagePicker _picker = ImagePicker();
   bool _isLoading = false;
+  bool _isNewChat = true;
   Service? _service;
 
   Future<void> _sendMessage(String message) async {
@@ -53,13 +51,18 @@ class _ChatScreenState extends State<ChatScreen> {
 
       // Replace with your server endpoint
       const url = apiUrl;
+      // final client = http.Client() as BrowserClient;
+      // client.withCredentials = true;
       final response = await http.post(
         Uri.parse(url),
         headers: {'Content-Type': 'application/json'},
-        body: json.encode({'content': content}),
+        body: json.encode({'content': content, 'new': _isNewChat}),
       );
 
       if (response.statusCode == 200) {
+        setState(() {
+          _isNewChat = false;
+        });
         final List<dynamic> botResponses = json.decode(utf8.decode(response.bodyBytes));
 
         for (var botResponse in botResponses) {
@@ -199,7 +202,11 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
           if (_service != null)
             ElevatedButton(
-              onPressed: () => print(_service!.serviceType),
+              onPressed: () {
+                Navigator.push(context, MaterialPageRoute(
+                    builder: (context) => ServiceStatusScreen(service: _service!)
+                ));
+              },
               child: const Text('View status'),
             ),
           if (_images.isNotEmpty)
