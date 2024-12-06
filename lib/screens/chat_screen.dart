@@ -7,6 +7,14 @@ import 'package:image_picker/image_picker.dart';
 const apiUrl = "https://k2pat.net/mekabot";
 const imagePrefix = "data:image/jpeg;base64,";
 
+class Service {
+  final String serviceType;
+  final String description;
+  final String iconUrl;
+  
+  Service(this.serviceType, this.description, this.iconUrl);
+}
+
 class ChatScreen extends StatefulWidget {
   @override
   _ChatScreenState createState() => _ChatScreenState();
@@ -18,6 +26,7 @@ class _ChatScreenState extends State<ChatScreen> {
   final List<Uint8List> _images = [];
   final ImagePicker _picker = ImagePicker();
   bool _isLoading = false;
+  Service? _service;
 
   Future<void> _sendMessage(String message) async {
     if (message.trim().isEmpty && _images.isEmpty) return;
@@ -69,6 +78,11 @@ class _ChatScreenState extends State<ChatScreen> {
                   ]
                 }
               });
+            });
+          } else if (botResponse['type'] == 'service' && botResponse['service'] != null) {
+            final service = botResponse['service'];
+            setState(() {
+              _service = Service(service['service_type'], service['description'], service['icon_url']);
             });
           }
         }
@@ -183,6 +197,11 @@ class _ChatScreenState extends State<ChatScreen> {
               },
             ),
           ),
+          if (_service != null)
+            ElevatedButton(
+              onPressed: () => print(_service!.serviceType),
+              child: const Text('View status'),
+            ),
           if (_images.isNotEmpty)
             SizedBox(
               height: 80,
