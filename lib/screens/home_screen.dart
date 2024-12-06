@@ -23,7 +23,7 @@ class _MekaBotState extends State<MekaBot> with SingleTickerProviderStateMixin {
     _controller = AnimationController(vsync: this);
 
     // Start a timer to play the animation at regular intervals
-    _timer = Timer.periodic(const Duration(seconds: 5), (timer) {
+    _timer = Timer.periodic(const Duration(seconds: 4), (timer) {
       if (!_controller.isAnimating) {
         _controller.reset();
         _controller.forward();
@@ -58,14 +58,6 @@ class _MekaBotState extends State<MekaBot> with SingleTickerProviderStateMixin {
     );
   }
 
-  void _handleMenuItem(String menuItem) {
-    Navigator.pop(context); // Close the drawer
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Selected: $menuItem')),
-    );
-    // You can navigate to corresponding screens based on menu items here
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -83,47 +75,6 @@ class _MekaBotState extends State<MekaBot> with SingleTickerProviderStateMixin {
               centerTitle: true, // Center the title
               backgroundColor: Colors.transparent, // Make AppBar background transparent
               elevation: 0, // Remove shadow
-              leading: Builder(
-                builder: (context) => Container(
-                  width: kToolbarHeight, // Ensure the icon area has a fixed width
-                  alignment: Alignment.centerLeft, // Align the icon to the left
-                  margin: const EdgeInsets.only(left: 18.0), // Add margin to the left
-                  child: IconButton(
-                    icon: Image.asset('icons/history.png'), // Use the custom icon
-                    onPressed: () {
-                      Scaffold.of(context).openDrawer();
-                    },
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-      drawer: Drawer(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const DrawerHeader(
-              child: Text(
-                'Menu',
-                style: TextStyle(fontSize: 24),
-              ),
-            ),
-            ListTile(
-              leading: const Icon(Icons.chat),
-              title: const Text('Chat History'),
-              onTap: () => _handleMenuItem('Chat History'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.call),
-              title: const Text('Call Workshop'),
-              onTap: () => _handleMenuItem('Call Workshop'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.car_repair),
-              title: const Text('Request Tow Truck'),
-              onTap: () => _handleMenuItem('Request Tow Truck'),
             ),
           ],
         ),
@@ -131,6 +82,7 @@ class _MekaBotState extends State<MekaBot> with SingleTickerProviderStateMixin {
       body: Column(
         children: [
           Expanded(
+            flex: 3,
             child: Align(
               alignment: const Alignment(0, -0.5), // Reposition animation
               child: GestureDetector(
@@ -150,63 +102,68 @@ class _MekaBotState extends State<MekaBot> with SingleTickerProviderStateMixin {
               ),
             ),
           ),
-          AnimatedOpacity(
-            opacity: _isTextVisible ? 1.0 : 0.0,
-            duration: const Duration(milliseconds: 500),
-            child: AnimatedSlide(
-              offset: _isTextVisible ? Offset(0, 0) : Offset(0, 0.5),
+          Expanded(
+            flex: 1,
+            child: AnimatedOpacity(
+              opacity: _isTextVisible ? 1.0 : 0.0,
               duration: const Duration(milliseconds: 500),
-              child: Column(
-                children: [
-                  const Text(
-                    'Welcome!',
-                    style: TextStyle(
-                      fontFamily: 'SansSerif', // Ensure this font is available in your project
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  Container(
-                    width: 300, // Set the desired width here
-                    child: const Text(
-                      'Let us know if you have car related issues!',
+              child: AnimatedSlide(
+                offset: _isTextVisible ? Offset(0, 0) : Offset(0, 0.5),
+                duration: const Duration(milliseconds: 500),
+                child: Column(
+                  children: [
+                    const Text(
+                      'Welcome!',
                       style: TextStyle(
                         fontFamily: 'SansSerif', // Ensure this font is available in your project
-                        fontSize: 22,
-                        fontWeight: FontWeight.normal,
-                        color: Color(0xFF393939),
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
                       ),
                       textAlign: TextAlign.center,
                     ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 50),
-          Center(
-            child: Container(
-              width: 100, // Set the desired width here
-              height: 100, // Set the desired height here
-              child: ElevatedButton(
-                onPressed: () => _navigateToChatScreen(context),
-                style: ElevatedButton.styleFrom(
-                  shape: CircleBorder(),
-                  padding: EdgeInsets.all(20),
-                  backgroundColor: Theme.of(context).colorScheme.primary, // Button color
-                ),
-                child: const Text(
-                  'Start',
-                  style: TextStyle(
-                    fontSize: 18,
-                    color: Colors.white,
-                  ),
+                    Container(
+                      width: 300, // Set the desired width here
+                      child: const Text(
+                        'Let us know if you have car related issues!',
+                        style: TextStyle(
+                          fontFamily: 'SansSerif', // Ensure this font is available in your project
+                          fontSize: 22,
+                          fontWeight: FontWeight.normal,
+                          color: Color(0xFF393939),
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
           ),
-          const SizedBox(height: 250),
+          Expanded(
+            flex: 2,
+            child: Center(
+              child: Container(
+                width: 100, // Set the desired width here
+                height: 100, // Set the desired height here
+                child: ElevatedButton(
+                  onPressed: () => _navigateToChatScreen(context),
+                  style: ElevatedButton.styleFrom(
+                    elevation: 10,
+                    shape: CircleBorder(),
+                    padding: EdgeInsets.all(20),
+                    backgroundColor: Colors.cyan, // Button color
+                  ),
+                  child: const Text(
+                    'Start',
+                    style: TextStyle(
+                      fontSize: 18,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
