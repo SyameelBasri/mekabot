@@ -1,6 +1,11 @@
-import 'dart:io';
+import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
+
+const apiUrl = "https://k2pat.net/mekabot";
+const imagePrefix = "data:image/jpeg;base64,";
 
 class ChatScreen extends StatefulWidget {
   @override
@@ -8,149 +13,241 @@ class ChatScreen extends StatefulWidget {
 }
 
 class _ChatScreenState extends State<ChatScreen> {
-  final List<Map<String, String>> messages = [];
-  final TextEditingController _textController = TextEditingController();
-  File? _image;
-  final picker = ImagePicker();
+  final TextEditingController _controller = TextEditingController();
+  final List<Map<String, dynamic>> _messages = []; // Updated to support buttons
+  final List<Uint8List> _images = [];
+  final ImagePicker _picker = ImagePicker();
+  bool _isLoading = false;
 
-  Future getImageGallery() async {
-    final pickedFile = await picker.pickImage(
-      source: ImageSource.gallery,
-    );
+  Future<void> _sendMessage(String message) async {
+    if (message.trim().isEmpty && _images.isEmpty) return;
+
     setState(() {
-      if (pickedFile != null) {
-        _image = File(pickedFile.path);
-      } else {
-        print("No Image picked");
-      }
-    });
-  }
-
-  Future getImageCamera() async {
-    final pickedFile = await picker.pickImage(
-      source: ImageSource.camera,
-    );
-    setState(() {
-      if (pickedFile != null) {
-        _image = File(pickedFile.path);
-      } else {
-        print("No Image picked");
-      }
-    });
-  }
-
-  void _sendMessage() {
-    if (_textController.text.trim().isNotEmpty) {
-      setState(() {
-        // Add user's message
-        messages.add({
-          'type': 'user',
-          'text': _textController.text.trim(),
-        });
-
-        // Add chatbot's response (dummy response for now)
-        messages.add({
-          'type': 'bot',
-          'text': 'Hello! How can I assist you?',
-        });
+      _messages.add({
+        'user': {'text': message, 'images': _images.toList()}
       });
-      _textController.clear();
+      _isLoading = true;
+    });
+
+    try {
+      // Convert images to base64
+      List<Map<String, dynamic>> base64Images = _images.map((imageBytes) {
+        final base64Image = base64Encode(imageBytes);
+        return {'type': 'image_url', 'image_url': {'url': imagePrefix + base64Image}};
+      }).toList();
+
+      // Prepare content
+      List<Map<String, dynamic>> content = [
+        if (message.isNotEmpty) {'type': 'text', 'text': message},
+        ...base64Images,
+      ];
+
+      // Replace with your server endpoint
+      const url = apiUrl;
+      final response = await http.post(
+        Uri.parse(url),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({'content': content}),
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> botResponses = json.decode(utf8.decode(response.bodyBytes));
+
+        for (var botResponse in botResponses) {
+          if (botResponse['type'] == 'text' && botResponse['text'] != null) {
+            setState(() {
+              _messages.add({'bot': {'text': botResponse['text']}});
+            });
+          } else if (botResponse['type'] == 'button' && botResponse['button'] != null) {
+            final button = botResponse['button'];
+            setState(() {
+              _messages.add({
+                'bot': {
+                  'text': null,
+                  'buttons': [
+                    {'label': button['label'], 'action': button['action']}
+                  ]
+                }
+              });
+            });
+          }
+        }
+      } else {
+        setState(() {
+          _messages.add({'bot': {'text': 'Error: Unable to fetch response.'}});
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _messages.add({'bot': {'text': 'Error: ${e.toString()}'}});
+      });
+    } finally {
+      setState(() {
+        _isLoading = false;
+        _images.clear();
+      });
+    }
+    _controller.clear();
+  }
+
+  Future<void> _pickImage() async {
+    final pickedFiles = await _picker.pickMultiImage();
+    if (pickedFiles != null) {
+      for (var pickedFile in pickedFiles) {
+        final imageBytes = await pickedFile.readAsBytes();
+        setState(() {
+          _images.add(imageBytes);
+        });
+      }
     }
   }
 
-  Widget _buildMessage(Map<String, String> message) {
-    bool isUser = message['type'] == 'user';
-    return Row(
-      mainAxisAlignment:
-          isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
-      children: [
-        if (!isUser) ...[
-          const CircleAvatar(
-            radius: 16,
-            child: Icon(Icons.android),
-          ),
-          const SizedBox(width: 8),
-        ],
-        Flexible(
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-            decoration: BoxDecoration(
-              color: isUser ? Colors.blue[100] : Colors.grey[300],
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Text(
-              message['text']!,
-              style: const TextStyle(fontSize: 16),
-            ),
-          ),
-        ),
-        if (isUser) ...[
-          const SizedBox(width: 8),
-          const CircleAvatar(
-            radius: 16,
-            child: Icon(Icons.person),
-          ),
-        ],
-      ],
-    );
+  Future<void> _captureImage() async {
+    final pickedFile = await _picker.pickImage(source: ImageSource.camera);
+    if (pickedFile != null) {
+      final imageBytes = await pickedFile.readAsBytes();
+      setState(() {
+        _images.add(imageBytes);
+      });
+    }
+  }
+
+  void _handleButtonTap(String action) {
+    // Send the action as a message and hide the buttons
+    _sendMessage(action);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Chat with MekaBot')),
+      appBar: AppBar(
+        title: const Text('Chatbot'),
+      ),
       body: Column(
         children: [
           Expanded(
             child: ListView.builder(
-              itemCount: messages.length,
+              itemCount: _messages.length,
               itemBuilder: (context, index) {
-                return _buildMessage(messages[index]);
+                final message = _messages[index];
+                final isUserMessage = message.containsKey('user');
+                final messageData = isUserMessage ? message['user'] : message['bot'];
+
+                return Container(
+                  alignment: isUserMessage ? Alignment.centerRight : Alignment.centerLeft,
+                  margin: const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
+                  child: Column(
+                    crossAxisAlignment: isUserMessage ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                    children: [
+                      // Display images
+                      if (messageData['images'] != null && messageData['images'].isNotEmpty)
+                        Wrap(
+                          spacing: 5,
+                          runSpacing: 5,
+                          children: (messageData['images'] as List<Uint8List>).map((imageBytes) {
+                            return Image.memory(
+                              imageBytes,
+                              width: 100,
+                              height: 100,
+                              fit: BoxFit.cover,
+                            );
+                          }).toList(),
+                        ),
+                      // Display text
+                      if (messageData['text'] != null && messageData['text']!.isNotEmpty)
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: isUserMessage ? Colors.blue[200] : Colors.grey[300],
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            messageData['text'],
+                            style: const TextStyle(fontSize: 16),
+                          ),
+                        ),
+                      // Display buttons
+                      if (messageData['buttons'] != null && messageData['buttons']!.isNotEmpty)
+                        Wrap(
+                          spacing: 10,
+                          children: (messageData['buttons'] as List<Map<String, dynamic>>).map((button) {
+                            return ElevatedButton(
+                              onPressed: () => _handleButtonTap(button['action'] ?? ''),
+                              child: Text(button['label'] ?? 'Unknown'),
+                            );
+                          }).toList(),
+                        ),
+                    ],
+                  ),
+                );
               },
             ),
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-            decoration: BoxDecoration(
-              color: Colors.grey[200],
-              border:
-                  const Border(top: BorderSide(color: Colors.grey, width: 1)),
-            ),
-            child: Column(
-              children: [
-                _image != null
-                    ? Align(
-                      alignment: Alignment.centerLeft,
-                      child: SizedBox(
-                          height: 100,
-                          width: 100,
-                          child: Image.file(
-                            _image!.absolute,
-                            fit: BoxFit.contain,
-                          )),
-                    )
-                    : Container(),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _textController,
-                        decoration: const InputDecoration(
-                          hintText: "Type a message",
-                          border: InputBorder.none,
+          if (_images.isNotEmpty)
+            SizedBox(
+              height: 80,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemCount: _images.length,
+                itemBuilder: (context, index) {
+                  return Padding(
+                    padding: const EdgeInsets.all(5.0),
+                    child: Stack(
+                      children: [
+                        Image.memory(
+                          _images[index],
+                          width: 80,
+                          height: 80,
+                          fit: BoxFit.cover,
                         ),
-                      ),
+                        Positioned(
+                          top: 0,
+                          right: 0,
+                          child: IconButton(
+                            icon: const Icon(Icons.close, color: Colors.red),
+                            onPressed: () {
+                              setState(() {
+                                _images.removeAt(index);
+                              });
+                            },
+                          ),
+                        ),
+                      ],
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.camera, color: Colors.blue),
-                      onPressed: getImageCamera,
+                  );
+                },
+              ),
+            ),
+          if (_isLoading)
+            const Padding(
+              padding: EdgeInsets.all(8.0),
+              child: CircularProgressIndicator(),
+            ),
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.photo),
+                  onPressed: _pickImage,
+                ),
+                IconButton(
+                  icon: const Icon(Icons.camera_alt),
+                  onPressed: _captureImage,
+                ),
+                Expanded(
+                  child: TextField(
+                    controller: _controller,
+                    decoration: const InputDecoration(
+                      hintText: 'Type your message...',
+                      border: OutlineInputBorder(),
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.send, color: Colors.blue),
-                      onPressed: _sendMessage,
-                    ),
-                  ],
+                  ),
+                ),
+                const SizedBox(width: 10),
+                ElevatedButton(
+                  onPressed: () => _sendMessage(_controller.text),
+                  child: const Text('Send'),
                 ),
               ],
             ),
