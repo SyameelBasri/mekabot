@@ -14,9 +14,14 @@ class ServiceStatusScreen extends StatelessWidget {
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Colors.transparent,
-        leading: const Icon(
-          Icons.arrow_back,
-          color: Colors.black,
+        leading: IconButton(
+          icon: const Icon(
+            Icons.arrow_back,
+            color: Colors.black,
+          ),
+          onPressed: () {
+            Navigator.of(context).pop();
+          },
         ),
         title: const Text(
           'MekaBot',
@@ -47,38 +52,105 @@ class ServiceStatusScreen extends StatelessWidget {
             "15-20 minutes",
             style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
           ),
-          Padding(
+          Container(
+            width: 400, // Reduced width for the container
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
             child: Card(
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               elevation: 2,
+              color: Colors.white,
               child: Column(
                 children: [
-                  ListTile(
-                    leading: Image.network(service.iconUrl),
-                    title: Text("Ordered service"),
-                    subtitle: Text(service.serviceType),
+                  const SizedBox(height: 20),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center, // Centers children vertically
+                    mainAxisAlignment: MainAxisAlignment.center, // Centers children horizontally within the Row
+                    children: [
+                      SizedBox(
+                        width: 40, // Reduced width
+                        height: 40, // Reduced height
+                        child: Center(
+                          child: Image.network(
+                            service.iconUrl,
+                            width: 30, // Reduced image width
+                            height: 30, // Reduced image height
+                            fit: BoxFit.contain, // Ensures the image fits within the SizedBox
+                            errorBuilder: (context, error, stackTrace) {
+                              return const Icon(Icons.error, color: Colors.red);
+                            },
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8), // Reduced spacing
+                      // Removed Expanded to allow content to take minimal space
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.center, // Centers texts horizontally
+                        mainAxisAlignment: MainAxisAlignment.center, // Centers texts vertically within the Row
+                        children: [
+                          const Text(
+                            "Ordered service",
+                            textAlign: TextAlign.center, // Centers text within its container
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF393939),
+                            ),
+                          ),
+                          const SizedBox(height: 4), // Spacing between title and subtitle
+                          Text(
+                            service.serviceType,
+                            textAlign: TextAlign.center, // Centers text within its container
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: Color(0xFF393939),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
+                  const SizedBox(height: 10),
                   const Padding(
                     padding: EdgeInsets.symmetric(horizontal: 16),
-                    child: Divider(
-                        color: Colors.grey
-                    ),
+                    child: Divider(color: Colors.grey),
                   ),
-                  Text(service.description)
+                  const SizedBox(height: 8),
+                  Text(service.description),
+                  const SizedBox(height: 12),
                 ],
               ),
             ),
           ),
-          Padding(
+          Container(
+            width: 400,
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
             child: Card(
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               elevation: 2,
+              color: Colors.white,
               child: ListTile(
                 leading: Icon(Icons.account_circle, color: Colors.teal[300], size: 40,),
-                title: Text("Contact your technician"),
-                subtitle: Text("Name: Abu Aiman Bin Ahmad Ali"),
+                title: const Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(height: 15),
+                    Text(
+                      "Contact your technician",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                subtitle: const Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Name: Abu Aiman Bin Ahmad Ali",
+                    ),
+                    SizedBox(height: 15),
+                  ],
+                ),
                 trailing: IconButton(
                   icon: Icon(Icons.phone, color: Colors.teal[300], size: 30,),
                   onPressed: () {
@@ -93,10 +165,22 @@ class ServiceStatusScreen extends StatelessWidget {
             child: Card(
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               elevation: 2,
+              color: Colors.white,
               child: ListTile(
                 leading: Icon(Icons.location_pin, color: Colors.red),
-                title: Text("Location details"),
-                subtitle: Column(
+                title: const Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(height: 15),
+                    Text(
+                      "Location details",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                subtitle: const Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text("Persiaran Bangsar 10, Taman Desa,"),
@@ -104,6 +188,8 @@ class ServiceStatusScreen extends StatelessWidget {
                     SizedBox(height: 4),
                     Text("Plate Number: WB 3064 E"),
                     Text("Car Model: Honda City 2019"),
+                    SizedBox(height: 15),
+
                   ],
                 ),
                 trailing: TextButton(
