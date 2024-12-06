@@ -333,7 +333,11 @@ class _ChatScreenState extends State<ChatScreen> {
             Container(
               // margin: const EdgeInsets.all(5.0), // Adds margin around the button
               child: ElevatedButton(
-                onPressed: () => print(_service!.serviceType),
+                onPressed: () {
+                  Navigator.push(context, MaterialPageRoute(
+                      builder: (context) => ServiceStatusScreen(service: _service!)
+                  ));
+                },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.white, // Background color
                   foregroundColor: Colors.black, // Text color
