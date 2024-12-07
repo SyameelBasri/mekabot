@@ -75,6 +75,7 @@ flutter:
     - assets/icons/history.png
     - assets/icons/bot-icon.png
     - assets/power_button.json
+    - assets/workshop.gif
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

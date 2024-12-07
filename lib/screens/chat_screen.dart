@@ -296,12 +296,7 @@ class _ChatScreenState extends State<ChatScreen> {
                             : Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                IconButton(
-                                  icon: Image.asset('icons/bot-icon.png'), // Use the custom icon
-                                  onPressed: () {
-                                    Scaffold.of(context).openDrawer();
-                                  },
-                                ),
+                                Image.asset('icons/bot-icon.png'),
                                 const SizedBox(width: 10), // Spacing between icon and container
                                 Expanded(
                                   child: Container(
